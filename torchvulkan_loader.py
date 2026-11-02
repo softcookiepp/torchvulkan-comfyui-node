@@ -25,6 +25,7 @@ class TorchVulkanLoader:
 	CATEGORY = "Backends"
 	
 	def load_to_torchvulkan(self, device, model = None, clip = None, vae = None):
+		raise NotImplementedError
 		device = torch.device(f"vulkan:{device}")
 		if model: model.to(device)
 		if clip: clip.to(device)
