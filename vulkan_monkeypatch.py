@@ -15,11 +15,18 @@ def get_free_memory_patched(dev=None, torch_free_too=False):
 		
 	# this is necessary to find the vulkan device at all
 	if "vulkan" in str(dev):
-		# no idea if torchvulkan exposes memory budget.
-		# will have to investigate later
-		mem_free_total = 1024 * 1024 * 1024
-		mem_free_torch = mem_free_total
-		directml_enabled = False
+		# torchvulkan wheels on pip don't have memory-related functions implemented
+		if "memory_stats" in torchvulkan.__dict__.keys():
+			stats = torchvulkan.memory_stats(dev)
+			mem_active = stats['active_bytes.all.current']
+			mem_reserved = stats['reserved_bytes.all.current']
+			mem_free_vk = torchvulkan.get_device_properties(dev).total_memory - mem_reserved
+			mem_free_torch = mem_reserved - mem_active
+			mem_free_total = mem_free_vk + mem_free_torch
+		else:
+			# if no memory accounting is available, do the same thing that was done with directml and just spoof it
+			mem_free_total = 1024 * 1024 * 1024
+			mem_free_torch = mem_free_total
 	elif hasattr(dev, 'type') and (dev.type == 'cpu' or dev.type == 'mps'):
 		mem_free_total = comfy.system_memory.virtual_memory_available()
 		mem_free_torch = mem_free_total
